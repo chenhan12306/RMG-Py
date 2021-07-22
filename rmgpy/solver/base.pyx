@@ -185,7 +185,7 @@ cdef class ReactionSystem(DASx):
 
         # number of allowed model resurrections
         self.retry = 0
-        self.max_retries = 0
+        self.max_retries = 5
 
     def __reduce__(self):
         """
@@ -757,19 +757,20 @@ cdef class ReactionSystem(DASx):
                             if len(edge_species_rate_ratios) > 0:
                                 ind = np.argmax(edge_species_rate_ratios)
                                 obj = edge_species[ind]
+                                self.retry += 1
                                 logging.info('At time {0:10.4e} s, species {1} at rate ratio {2} was added to model core '
                                             'in model resurrection process. Retry # {3} of {4}'.format(self.t, obj,edge_species_rates[ind], self.retry, self.max_retries))
                                 invalid_objects.append(obj)
-                                self.retry += 1
 
 
                             if total_div_accum_nums and len(total_div_accum_nums) > 0:  #if dynamics data available
                                 ind = np.argmax(total_div_accum_nums)
                                 obj = edge_reactions[ind]
+                                self.retry += 1
                                 logging.info('At time {0:10.4e} s, Reaction {1} at dynamics number {2} was added to model core '
                                             'in model resurrection process. Retry # {3} of {4}'.format(self.t, obj,total_div_accum_nums[ind],  self.retry, self.max_retries))
                                 invalid_objects.append(obj)
-                                self.retry += 1
+                                
                         else:
                             raise RuntimeError ('too many retries, ending simulation')
                             
