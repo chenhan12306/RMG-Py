@@ -298,16 +298,17 @@ class TestCrossVal(unittest.TestCase):
         """
         self.assertIsInstance(self.cross_val.level_of_theory, LevelOfTheory)
         self.assertEqual(self.cross_val.bac_type, 'p')
-        self.assertEqual(self.cross_val.val_type, 'leaveoneout')
+        self.assertEqual(self.cross_val.n_folds, -1)
         self.assertIsNone(self.cross_val.dataset)
         self.assertIsNone(self.cross_val.bacs)
 
     def test_leave_one_out(self):
         """
         Test leave-one-out cross-validation.
+        Setting n_folds as -1 causes the number of folds to equal the length of the dataset.
         """
         idxs = [19, 94, 191]
-        self.cross_val.val_type = 'Leave one out'
+        self.cross_val.n_folds = -1
         self.cross_val.fit(idxs=idxs)
 
         self.assertIsInstance(self.cross_val.dataset, BACDataset)
@@ -319,6 +320,26 @@ class TestCrossVal(unittest.TestCase):
         for i, bac in enumerate(self.cross_val.bacs):
             self.assertIsInstance(bac, BAC)
             self.assertEqual(len(bac.dataset), 2)
+            for d in bac.dataset:
+                self.assertNotEqual(d.spc.index, train_folds[i])
+
+    def test_kfold(self):
+        """
+        Test k-fold cross-validation.
+        """
+        idxs = [0, 1, 2, 3, 4]
+        self.cross_val.n_folds = 5
+        self.cross_val.fit(idxs=idxs)
+
+        self.assertIsInstance(self.cross_val.dataset, BACDataset)
+        self.assertEqual(len(self.cross_val.dataset), 5)
+        self.assertIsNotNone(self.cross_val.dataset.bac_data)
+        self.assertEqual(len(self.cross_val.bacs), 5)
+
+        train_folds = [[0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 0], [3, 4, 0, 1], [4, 0, 1, 2]]
+        for i, bac in enumerate(self.cross_val.bacs):
+            self.assertIsInstance(bac, BAC)
+            self.assertEqual(len(bac.dataset), 4)
             for d in bac.dataset:
                 self.assertNotEqual(d.spc.index, train_folds[i])
 
