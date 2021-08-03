@@ -49,7 +49,7 @@ from typing import Dict, Iterable, List, Sequence, Set, Tuple, Union
 
 import numpy as np
 import scipy.optimize as optimize
-from sklearn.model_selection import LeaveOneOut
+from sklearn.model_selection import KFold
 
 from rmgpy.quantity import ScalarQuantity
 
@@ -69,7 +69,7 @@ class BACJob:
     def __init__(self,
                  level_of_theory: Union[LevelOfTheory, CompositeLevelOfTheory],
                  bac_type: str = 'p',
-                 crossval: bool = False,
+                 crossval_n_folds: int = 1,
                  write_to_database: bool = False,
                  overwrite: bool = False,
                  **kwargs):
@@ -79,19 +79,22 @@ class BACJob:
         Args:
             level_of_theory: The level of theory that will be used to get training data from the RMG database.
             bac_type: 'p' for Petersson-style BACs, 'm' for Melius-style BACs.
-            crossval: Perform leave-one-out cross-validation (does not write data to database).
+            crossval_n_folds: Performs k-fold cross-validation (does not write data to database).
+                              1 indicates to not do cross-validation.
+                              -1 indicates to do leave-one-out cross-validation.
+                              Any other positive integer defines the number of folds.
             write_to_database: Save the fitted BACs directly to the RMG database.
             overwrite: Overwrite BACs in the RMG database if they already exist.
             kwargs: Additional parameters passed to BAC.fit or CrossVal.fit.
         """
         self.level_of_theory = level_of_theory
         self.bac_type = bac_type
-        self.crossval = crossval
+        self.crossval_n_folds = crossval_n_folds
         self.write_to_database = write_to_database
         self.overwrite = overwrite
         self.kwargs = kwargs
-        if crossval:
-            self.bac = CrossVal(level_of_theory, bac_type=bac_type)
+        if self.crossval_n_folds != 1:
+            self.bac = CrossVal(level_of_theory, bac_type=bac_type, n_folds=crossval_n_folds)
         else:
             self.bac = BAC(level_of_theory, bac_type=bac_type)
 
@@ -107,14 +110,14 @@ class BACJob:
         logging.info(f'Running BAC job {jobnum}')
         self.bac.fit(**self.kwargs)
 
-        if output_directory is not None:
+        if output_directory is not None and self.crossval_n_folds == 1:
             os.makedirs(output_directory, exist_ok=True)
             self.write_output(output_directory, jobnum=jobnum)
 
             if plot:
                 self.plot(output_directory, jobnum=jobnum)
 
-        if self.write_to_database and not self.crossval:
+        if self.write_to_database and self.crossval_n_folds == 1:
             try:
                 self.bac.write_to_database(overwrite=self.overwrite)
             except IOError as e:
@@ -139,13 +142,13 @@ class BACJob:
             stats_before = self.bac.dataset.calculate_stats()
             stats_after = self.bac.dataset.calculate_stats(for_bac_data=True)
             bac_type_str = f'{"Melius" if self.bac.bac_type == "m" else "Petersson"}-type BACs'
-            if self.crossval:
+            if self.crossval_n_folds != 1:
                 f.write(f'# Job {jobnum}: Cross-validation with {bac_type_str}:\n')
             else:
                 f.write(f'# Job {jobnum}: {bac_type_str}:\n')
-            f.write(f'# RMSE/MAE before fitting: {stats_before.rmse:.2f}/{stats_before.mae:.2f} kcal/mol\n')
-            f.write(f'# RMSE/MAE after fitting: {stats_after.rmse:.2f}/{stats_after.mae:.2f} kcal/mol\n')
-            if not self.crossval:
+            f.write(f'# Training RMSE/MAE before fitting: {stats_before.rmse:.2f}/{stats_before.mae:.2f} kcal/mol\n')
+            f.write(f'# Training RMSE/MAE after fitting: {stats_after.rmse:.2f}/{stats_after.mae:.2f} kcal/mol\n')
+            if self.crossval_n_folds == 1:
                 f.writelines(self.bac.format_bacs())
             f.write('\n')
 
@@ -194,7 +197,7 @@ class BACJob:
             return
 
         model_chemistry_formatted = self.level_of_theory.to_model_chem().replace('//', '__').replace('/', '_')
-        if not self.crossval:
+        if self.crossval_n_folds == 1:
             correlation_path = os.path.join(output_directory, f'{jobnum}_{model_chemistry_formatted}_correlation.pdf')
             self.bac.save_correlation_mat(correlation_path)
 
@@ -643,8 +646,8 @@ class BAC:
 
         stats_before = self.dataset.calculate_stats()
         stats_after = self.dataset.calculate_stats(for_bac_data=True)
-        logging.info(f'RMSE/MAE before fitting: {stats_before.rmse:.2f}/{stats_before.mae:.2f} kcal/mol')
-        logging.info(f'RMSE/MAE after fitting: {stats_after.rmse:.2f}/{stats_after.mae:.2f} kcal/mol')
+        logging.info(f'Training RMSE/MAE before fitting: {stats_before.rmse:.2f}/{stats_before.mae:.2f} kcal/mol')
+        logging.info(f'Training RMSE/MAE after fitting: {stats_after.rmse:.2f}/{stats_after.mae:.2f} kcal/mol')
 
     def test(self,
              species: List[ReferenceSpecies] = None,
@@ -966,29 +969,23 @@ class CrossVal:
 
     def __init__(self, level_of_theory: Union[LevelOfTheory, CompositeLevelOfTheory],
                  bac_type: str = 'p',
-                 val_type: str = 'leave-one-out'):
+                 n_folds: int = -1):
         """
         Initialize a CrossVal instance.
 
         Args:
             level_of_theory: Level of theory for getting data from reference database.
             bac_type: Type of BACs to fit ('p' for Petersson and 'm' for Melius).
-            val_type: Type of cross-validation.
+            n_folds: Number of folds use during cross-validation.
+                     Default value is -1 i.e. use leave-one-out cross-validation.
         """
         self.level_of_theory = level_of_theory
         self.bac_type = bac_type
-        self.val_type = val_type
+        self.n_folds = n_folds
 
         self.dataset = None  # Complete dataset containing cross-validation estimates for each data point
         self.bacs = None  # List of BAC instances, one for each fold
 
-    @property
-    def val_type(self) -> str:
-        return self._val_type
-
-    @val_type.setter
-    def val_type(self, val: str):
-        self._val_type = val.lower().replace('-', '').replace(' ', '')
 
     def fit(self,
             db_names: Union[str, List[str]] = 'main',
@@ -1015,28 +1012,44 @@ class CrossVal:
                                        idxs=idxs, exclude_idxs=exclude_idxs,
                                        exclude_elements=exclude_elements, charge=charge, multiplicity=multiplicity)
         self.bacs = []
-
-        if self.val_type == 'leaveoneout':
+        test_data_results = []
+        if self.n_folds == -1:
             logging.info(f'Starting leave-one-out cross-validation for {self.level_of_theory}')
-            folds = LeaveOneOut().split(self.dataset)
+            folds = KFold(n_splits=len(self.dataset)).split(self.dataset)
         else:
-            raise NotImplementedError(f'{self.val_type} cross-validation is not implemented')
-
+            logging.info(f'Starting {self.n_folds}-fold cross-validation for {self.level_of_theory}')
+            folds = KFold(n_splits=self.n_folds).split(self.dataset)
         for i, (train, test) in enumerate(folds):
-            logging.info(f'Fold {i}')
+            logging.info(f'\nFold {i}')
             train_idxs = [self.dataset[i].spc.index for i in train]
             test_data = BACDataset([self.dataset[i] for i in test])
             logging.info(f'Testing on species {", ".join(str(d.spc.index) for d in test_data)}')
             bac = BAC(self.level_of_theory, self.bac_type)
             bac.fit(db_names=db_names, idxs=train_idxs, **kwargs)
-            bac.test(dataset=test_data)  # Stores predictions in each BACDatapoint
+            bac.test(dataset=test_data)  # Stores predictions in each BACDataset
             self.bacs.append(bac)
+            test_data_results.append(test_data)
 
-        stats_before = self.dataset.calculate_stats()
-        stats_after = self.dataset.calculate_stats(for_bac_data=True)
+            stats_before = test_data.calculate_stats()
+            stats_after = test_data.calculate_stats(for_bac_data=True)
+            logging.info('Testing results:')
+            logging.info(f'RMSE/MAE before fitting: {stats_before.rmse:.2f}/{stats_before.mae:.2f} kcal/mol')
+            logging.info(f'RMSE/MAE after fitting: {stats_after.rmse:.2f}/{stats_after.mae:.2f} kcal/mol')
+
+        rmse_before = [test_data.calculate_stats().rmse for test_data in test_data_results]
+        mae_before = [test_data.calculate_stats().mae for test_data in test_data_results]
+        rmse_after = [test_data.calculate_stats(for_bac_data=True).rmse for test_data in test_data_results]
+        mae_after = [test_data.calculate_stats(for_bac_data=True).mae for test_data in test_data_results]
+
         logging.info('Cross-validation results:')
-        logging.info(f'RMSE/MAE before fitting: {stats_before.rmse:.2f}/{stats_before.mae:.2f} kcal/mol')
-        logging.info(f'RMSE/MAE after fitting: {stats_after.rmse:.2f}/{stats_after.mae:.2f} kcal/mol')
+        logging.info(f'Testing RMSE before fitting (mean +- 1 std): '
+                     f'{np.average(rmse_before):.2f} +- {np.std(rmse_before):.2f} kcal/mol')
+        logging.info(f'Testing MAE before fitting (mean +- 1 std): '
+                     f'{np.average(mae_before):.2f} +- {np.std(mae_before):.2f} kcal/mol')
+        logging.info(f'Testing RMSE after fitting (mean +- 1 std): '
+                     f'{np.average(rmse_after):.2f} +- {np.std(rmse_after):.2f} kcal/mol')
+        logging.info(f'Testing MAE after fitting (mean +- 1 std): '
+                     f'{np.average(mae_after):.2f} +- {np.std(mae_after):.2f} kcal/mol')
 
 
 def _covariance_to_correlation(cov: np.ndarray) -> np.ndarray:
