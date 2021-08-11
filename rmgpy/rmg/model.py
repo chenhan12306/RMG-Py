@@ -284,7 +284,6 @@ class CoreEdgeReactionModel:
 
         # If we're here then we're ready to make the new species
         if check_cut:
-            # molecule = Fragment().from_smiles_like_string(molecule.to_smiles())
             mols = Fragment().cut_molecule(molecule, cut_through = False)
             if len(mols) == 1:
                 molecule = mols[0]
@@ -305,7 +304,6 @@ class CoreEdgeReactionModel:
             spec.index = -1
 
         spec.creation_iteration = self.iteration_num
-        #spec.generate_resonance_structures()
         spec.molecular_weight = Quantity(spec.molecule[0].get_molecular_weight() * 1000., "amu")
 
         if generate_thermo:
