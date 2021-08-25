@@ -45,9 +45,11 @@ from rmgpy.solver.base cimport ReactionSystem
 
 cdef class LiquidReactor(ReactionSystem):
     """
-    A reaction system consisting of a homogeneous, isothermal, constant volume batch
-    reactor. These assumptions allow for a number of optimizations that enable
-    this solver to complete very rapidly, even for large kinetic models.
+    A reaction system consisting of a homogeneous, isothermal liquid reactor,
+    which can be either a constant volume batch reactor, a constant volume CSTR,
+    or a semi-batch reactor based on inputs. These assumptions allow for a number
+    of optimizations that enable this solver to complete very rapidly, even for large
+    kinetic models.
     """
 
     cdef public ScalarQuantity T
