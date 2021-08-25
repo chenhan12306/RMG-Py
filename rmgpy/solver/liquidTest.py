@@ -250,7 +250,9 @@ class LiquidReactorCheck(unittest.TestCase):
         ]
 
         # Analytical Jacobian for reaction 6
-        def jacobian_rxn6(c, kf, kr, s):
+        def jacobian_rxn6(condition, c, kf, kr, s):
+            (residence_time, _, _, _) = self.flow_conditions[condition]
+
             c1, c2, c3, c4 = c[s[1]], c[s[2]], c[s[3]], c[s[4]]
             jaco = np.zeros((5, 5))
 
@@ -261,10 +263,16 @@ class LiquidReactorCheck(unittest.TestCase):
             jaco[2, 1:] = 0.5 * jaco[1, 1:]
             jaco[3, 1:] = -jaco[1, 1:]
             jaco[4, 1:] = -0.5 * jaco[1, 1:]
+
+            if condition == 'residence_time':
+                jaco -= 1/residence_time * np.identity(5, np.float64)
+
             return jaco
 
         # Analytical Jacobian for reaction 7
-        def jacobian_rxn7(c, kf, kr, s):
+        def jacobian_rxn7(condition, c, kf, kr, s):
+            (residence_time, _, _, _) = self.flow_conditions[condition]
+
             c1, c2, c3, c4 = c[s[1]], c[s[2]], c[s[3]], c[s[4]]
             jaco = np.zeros((5, 5))
 
@@ -275,49 +283,52 @@ class LiquidReactorCheck(unittest.TestCase):
             jaco[2, 1:] = 0.5 * jaco[1, 1:]
             jaco[3, 1:] = -jaco[1, 1:]
             jaco[4, 1:] = -0.5 * jaco[1, 1:]
+
+            if condition == 'residence_time':
+                jaco -= 1/residence_time * np.identity(5, np.float64)
+
             return jaco
 
-        for rxn_num, rxn in enumerate(rxn_list):
-            core_reactions = [rxn]
+        for condition in self.flow_conditions:
+            (residence_time, v_in, inlet_concentrations, V_0) = self.flow_conditions[condition]
 
-            rxn_system0 = LiquidReactor(self.T, c0, 1, termination=[])
-            rxn_system0.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
-            dydt0 = rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0]
+            for rxn_num, rxn in enumerate(rxn_list):
+                core_reactions = [rxn]
 
-            dN = .000001 * sum(rxn_system0.y)
-
-            # Let the solver compute the jacobian
-            solver_jacobian = rxn_system0.jacobian(0.0, rxn_system0.y, dydt0, 0.0)
-
-            if rxn_num not in (6, 7):
-                dydt = []
-                for i in range(num_core_species):
-                    rxn_system0.y[i] += dN
-                    dydt.append(rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0])
-                    rxn_system0.y[i] -= dN  # reset y
-
-                # Compute the jacobian using finite differences
-                jacobian = np.zeros((num_core_species, num_core_species))
-                for i in range(num_core_species):
-                    for j in range(num_core_species):
-                        jacobian[i, j] = (dydt[j][i] - dydt0[i]) / dN
-                        self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j]))
-            # The forward finite difference is very unstable for reactions
-            # 6 and 7. Use Jacobians calculated by hand instead.
-            elif rxn_num == 6:
-                kforward = rxn.get_rate_coefficient(self.T)
-                kreverse = kforward / rxn.get_equilibrium_constant(self.T)
-                jacobian = jacobian_rxn6(c0, kforward, kreverse, core_species)
-                for i in range(num_core_species):
-                    for j in range(num_core_species):
-                        self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j]))
-            elif rxn_num == 7:
-                kforward = rxn.get_rate_coefficient(self.T)
-                kreverse = kforward / rxn.get_equilibrium_constant(self.T)
-                jacobian = jacobian_rxn7(c0, kforward, kreverse, core_species)
-                for i in range(num_core_species):
-                    for j in range(num_core_species):
-                        self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j]))
+                rxn_system0 = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
+                rxn_system0.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
+                dydt0 = rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0]
+                dN = .000001 * sum(rxn_system0.y)
+                # Let the solver compute the jacobian
+                solver_jacobian = rxn_system0.jacobian(0.0, rxn_system0.y, dydt0, 0.0)
+                if rxn_num not in (6, 7):
+                    dydt = []
+                    for i in range(num_core_species):
+                        rxn_system0.y[i] += dN
+                        dydt.append(rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0])
+                        rxn_system0.y[i] -= dN  # reset y
+                    # Compute the jacobian using finite differences
+                    jacobian = np.zeros((num_core_species, num_core_species))
+                    for i in range(num_core_species):
+                        for j in range(num_core_species):
+                            jacobian[i, j] = (dydt[j][i] - dydt0[i]) / dN
+                            self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j])+1e-20)
+                # The forward finite difference is very unstable for reactions
+                # 6 and 7. Use Jacobians calculated by hand instead.
+                elif rxn_num == 6:
+                    kforward = rxn.get_rate_coefficient(self.T)
+                    kreverse = kforward / rxn.get_equilibrium_constant(self.T)
+                    jacobian = jacobian_rxn6(condition, c0, kforward, kreverse, core_species)
+                    for i in range(num_core_species):
+                        for j in range(num_core_species):
+                            self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j])+1e-20)
+                elif rxn_num == 7:
+                    kforward = rxn.get_rate_coefficient(self.T)
+                    kreverse = kforward / rxn.get_equilibrium_constant(self.T)
+                    jacobian = jacobian_rxn7(condition, c0, kforward, kreverse, core_species)
+                    for i in range(num_core_species):
+                        for j in range(num_core_species):
+                            self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j])+1e-20)
 
     def test_compute_derivative(self):
         rxn_list = [
