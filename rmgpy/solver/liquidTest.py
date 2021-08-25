@@ -104,6 +104,12 @@ class LiquidReactorCheck(unittest.TestCase):
 
         cls.T = 1000
 
+        #residence time, v_in, inlet_concentrations, V_0
+        cls.flow_conditions = {'batch': (None, None, None, None), #batch system
+                    'residence_time': (1, None, None, None), #specifying residence time
+                    'semi-batch': (None, 0.01, {cls.CH4: 0.1}, 1) #
+                    }
+
         cls.file_dir = os.path.join(os.path.dirname(rmgpy.__file__), 'solver', 'files', 'liquid_phase_constSPC')
 
     def test_compute_flux(self):
