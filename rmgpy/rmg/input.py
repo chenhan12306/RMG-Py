@@ -1157,6 +1157,16 @@ def save_input_file(path, rmg):
             f.write('    initialConcentrations={\n')
             for spcs, conc in system.initial_concentrations.items():
                 f.write('        "{0!s}": ({1:g},"{2!s}"),\n'.format(spcs.label, conc.value, conc.units))
+            if system.residence_time:
+                f.write(f'    residenceTime = ({system.residence_time:g}, "s"),\n')
+            if system.V_0 != -1:
+                f.write(f'    initialVolume = ({system.V_0:g}, "m^3"),\n')
+            if system.v_in != -1:
+                f.write(f'    inletVolumetricFlowRate = ({system.v_in:g}, "m^3/s"),\n')
+                f.write('    inletConcentrations={\n')
+                for spcs, conc in system.inlet_concentrations.items():
+                    f.write(f'        "{spcs.label!s}": ({conc:g},"{conc.units!s}"),\n')
+                f.write('    },\n')
         else:
             f.write('simpleReactor(\n')
             f.write('    temperature = ({0:g},"{1!s}"),\n'.format(system.T.value, system.T.units))
