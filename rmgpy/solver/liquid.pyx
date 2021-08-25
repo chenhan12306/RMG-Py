@@ -108,14 +108,20 @@ cdef class LiquidReactor(ReactionSystem):
     def convert_initial_keys_to_species_objects(self, species_dict):
         """
         Convert the initial_concentrations dictionary from species names into species objects,
-        using the given dictionary of species.
+        using the given dictionary of species. Also convert the inlet_concentrations dictionary if given.
         """
         initial_concentrations = {}
-        for label, moleFrac in self.initial_concentrations.items():
+        for label, conc in self.initial_concentrations.items():
             if label == 'T':
                 continue
-            initial_concentrations[species_dict[label]] = moleFrac
+            initial_concentrations[species_dict[label]] = conc
         self.initial_concentrations = initial_concentrations
+
+        inlet_concentrations = {}
+        if self.inlet_concentrations:
+            for label, conc in self.inlet_concentrations.items():
+                inlet_concentrations[species_dict[label]] = conc
+            self.inlet_concentrations = inlet_concentrations
 
         conditions = {}
         if self.sens_conditions is not None:
@@ -225,7 +231,24 @@ cdef class LiquidReactor(ReactionSystem):
             i = self.get_species_index(spec)
             self.core_species_concentrations[i] = conc
 
-        V = 1.0 / np.sum(self.core_species_concentrations)
+        # CSTR / semi-batch + specifying concentrations
+        if self.inlet_concentrations:
+            for spec, conc in self.inlet_concentrations.items():
+                i = self.get_species_index(spec)
+                self.inlet_species_concentrations[i] = conc
+            self.num_inlet_species = len(self.inlet_species_concentrations)
+        # CSTR + not specifying inlet concentrations
+        elif self.residence_time != -1.0:
+            for spec, conc in self.initial_concentrations.items():
+                i = self.get_species_index(spec)
+                self.inlet_species_concentrations[i] = conc
+            self.num_inlet_species = len(self.inlet_species_concentrations)
+
+        if not self.constant_volume:
+            V = self.V_0
+        else:
+            V = 1.0 / np.sum(self.core_species_concentrations)
+
         self.V = V
 
         for j in range(self.num_core_species):
