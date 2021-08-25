@@ -114,7 +114,7 @@ class LiquidReactorCheck(unittest.TestCase):
 
     def test_compute_flux(self):
         """
-        Test the liquid batch reactor with a simple kinetic model. 
+        Test the liquid batch reactor, cstr, and semi-batch reactor with a simple kinetic model.
         """
 
         rxn1 = Reaction(
