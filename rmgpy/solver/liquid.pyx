@@ -478,9 +478,13 @@ cdef class LiquidReactor(ReactionSystem):
 
         pd = -cj * np.identity(num_core_species, np.float64)
 
-        V = self.V  # volume is constant
+        if not self.constant_volume:
+            self.V = self.v_in * t + self.V_0
+
+        V = self.V  # volume is constant for batch reactor and CSTR
 
         C = np.zeros_like(self.core_species_concentrations)
+
         for j in range(num_core_species):
             C[j] = y[j] / V
 
