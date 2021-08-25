@@ -389,6 +389,41 @@ def liquid_reactor(temperature,
                                  "entries of the same format")
             initialConcentrations[spec] = [Quantity(conc[0]), Quantity(conc[1])]
 
+    if inletVolumetricFlowRate or initialVolume or inletConcentrations or residenceTime: #CSTR or semi-batch
+
+        # Check input: either inletVolumetricFlowRate + initialVolume + inletConcentrations for semi-batch
+        # or residence time + optional inletVolumetricFlowRate for CSTR
+        if (inletVolumetricFlowRate or initialVolume) and residenceTime:
+            raise InputError('Specify the residence time and the optional inlet concentrations if a CSTR is desired,'
+                             'or enter the inlet volumetric flow rate, the intlet concentrations, and the initial volume'
+                             'if a semi-batch reactor is desired.')
+
+        # CSTR
+        if residenceTime:
+            if len(residenceTime) != 2:
+                raise InputError('Residence time must be in the form of (number,units)')
+            residenceTime = Quantity(residenceTime).value_si
+
+            if inletConcentrations:
+                for spec, conc in inletConcentrations.items():
+                    if len(inletConcentrations[spec]) != 2:
+                        raise InputError("Inlet concentration values must be in the form of (number, units).")
+                    concentration = Quantity(conc)
+                    inletConcentrations[spec] = concentration.value_si
+
+        # Semi-batch
+        else:
+            if not (inletVolumetricFlowRate and inletConcentrations and initialVolume):
+                raise InputError('Inlet volumetric flow rate, inlet concentrations, and initial volume must be specified'
+                                 ' together for semi-batch reactor.')
+            inletVolumetricFlowRate = Quantity(inletVolumetricFlowRate).value_si
+            initialVolume = Quantity(initialVolume).value_si
+            for spec, conc in inletConcentrations.items():
+                if len(inletConcentrations[spec]) != 2:
+                    raise InputError("Inlet concentration values must be in the form of (number, units).")
+                concentration = Quantity(conc)
+                inletConcentrations[spec] = concentration.value_si
+
     if not isinstance(temperature, list) and all([not isinstance(x, list) for x in initialConcentrations.values()]):
         nSims = 1
 
