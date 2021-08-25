@@ -411,7 +411,6 @@ class LiquidReactorCheck(unittest.TestCase):
         """
 
         c0 = {self.C2H5: 0.1, self.CH3: 0.1, self.CH4: 0.4, self.C2H6: 0.4}
-        temp = 1000
 
         # set up the liquid phase reactor 1
         termination_conversion = []
