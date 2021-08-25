@@ -817,5 +817,9 @@ cdef class LiquidReactor(ReactionSystem):
                         if ir[j, 2] != -1:
                             pd[ir[j, 2], ip[j, 2]] += deriv
 
+        if self.residence_time != -1.0:
+            pd -= 1/self.residence_time * np.identity(num_core_species, np.float64)
+
         self.jacobian_matrix = pd + cj * np.identity(num_core_species, np.float64)
+
         return pd
