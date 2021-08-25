@@ -479,8 +479,12 @@ class LiquidReactorCheck(unittest.TestCase):
         sensitivity_threshold = 0.001
         const_species = ["CH4"]
         sens_conds = {self.C2H5: 0.1, self.CH3: 0.1, self.CH4: 0.4, self.C2H6: 0.4, 'T': self.T}
+        residence_time = None
+        v_in = None
+        inlet_concentrations = None
+        V_0 = None
 
-        rxn_system = LiquidReactor(self.T, c0, 1, termination_conversion, sensitivity, sensitivity_threshold,
+        rxn_system = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination_conversion, sensitivity, sensitivity_threshold,
                                    const_spc_names=const_species, sens_conditions=sens_conds)
         # The test regarding the writing of constantSPCindices from input file is check with the previous test.
         rxn_system.const_spc_indices = [0]
