@@ -300,6 +300,7 @@ cdef class LiquidReactor(ReactionSystem):
         edge_reaction_rates = np.zeros_like(self.edge_reaction_rates)
         network_leak_rates = np.zeros_like(self.network_leak_rates)
 
+        C_in = np.zeros_like(self.core_species_concentrations)
         C = np.zeros_like(self.core_species_concentrations)
         V = self.V  # constant volume reactor
 
