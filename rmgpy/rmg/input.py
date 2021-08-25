@@ -461,7 +461,7 @@ def liquid_reactor(temperature,
         sens_conditions = sensitivityConcentrations
         sens_conditions['T'] = Quantity(sensitivityTemperature).value_si
 
-    system = LiquidReactor(T, initialConcentrations, nSims, termination, sensitive_species, sensitivityThreshold,
+    system = LiquidReactor(T, initialConcentrations, residenceTime, inletVolumetricFlowRate, inletConcentrations, initialVolume, nSims, termination, sensitive_species, sensitivityThreshold,
                            sens_conditions, constantSpecies)
     rmg.reaction_systems.append(system)
 
