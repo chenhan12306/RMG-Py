@@ -67,7 +67,7 @@ cdef class LiquidReactor(ReactionSystem):
     cdef public double v_in # for semi-batch
     cdef public double V_0 # for semi-batch
 
-    def __init__(self, T, initial_concentrations, n_sims=1, termination=None, sensitive_species=None,
+    def __init__(self, T, initial_concentrations, residence_time=None, v_in=None, inlet_concentrations=None, V_0=None, n_sims=1, termination=None, sensitive_species=None,
                  sensitivity_threshold=1e-3, sens_conditions=None, const_spc_names=None):
 
         ReactionSystem.__init__(self, termination, sensitive_species, sensitivity_threshold)
@@ -79,9 +79,25 @@ cdef class LiquidReactor(ReactionSystem):
 
         self.P = Quantity(100000., 'kPa')  # Arbitrary high pressure (1000 Bar) to get reactions in the high-pressure limit!
         self.initial_concentrations = initial_concentrations  # should be passed in SI
-        self.V = 0  # will be set from initial_concentrations in initialize_model
+        self.V = 0  # will be set in initialize_model using initial_concentrations for CSTR and batch, or calculated using V_0, v_in, and t for semi-batch
         self.constant_volume = True
         self.viscosity = 0  # in Pa*s
+        self.residence_time = -1.0
+        self.v_in = -1.0
+        self.V_0 = -1.0
+        self.inlet_concentrations = {}
+
+        # CSTR
+        if residence_time:
+            self.residence_time = residence_time
+
+        if inlet_concentrations:
+            self.inlet_concentrations = inlet_concentrations
+
+        if v_in and V_0: #semi-batch reactor
+            self.v_in = v_in
+            self.V_0 = V_0
+            self.constant_volume = False # volume will be calculated with V_0, v_in, and t
 
         #Constant concentration attributes
         self.const_spc_indices = None
