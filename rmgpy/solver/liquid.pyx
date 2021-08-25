@@ -270,7 +270,7 @@ cdef class LiquidReactor(ReactionSystem):
         cdef np.ndarray[np.float64_t,ndim=1] core_species_concentrations, core_species_rates, core_reaction_rates
         cdef np.ndarray[np.float64_t,ndim=1] edge_species_rates, edge_reaction_rates, network_leak_rates
         cdef np.ndarray[np.float64_t,ndim=1] core_species_consumption_rates, core_species_production_rates
-        cdef np.ndarray[np.float64_t, ndim=1] C
+        cdef np.ndarray[np.float64_t, ndim=1] C, C_in
         cdef np.ndarray[np.float64_t, ndim=2] jacobian, dgdk
 
         ir = self.reactant_indices
