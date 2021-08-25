@@ -312,6 +312,11 @@ cdef class LiquidReactor(ReactionSystem):
             C[j] = y[j] / V
             core_species_concentrations[j] = C[j]
 
+        # CSTR or semi-batch
+        if (self.residence_time != -1.0) or (not self.constant_volume):
+            for j in range(self.num_inlet_species):
+                C_in[j] = self.inlet_species_concentrations[j]
+
         for j in range(ir.shape[0]):
             k = kf[j]
             if ir[j, 0] >= num_core_species or ir[j, 1] >= num_core_species or ir[j, 2] >= num_core_species:
