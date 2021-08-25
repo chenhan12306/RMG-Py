@@ -391,6 +391,26 @@ class SolventData(object):
         return math.exp(self.A + (self.B / T) + (self.C * math.log(T)) + (self.D * (T ** self.E)))
 
 
+    def get_solvent_saturation_pressure(self, T):
+        """
+        Returns the saturation pressure of the solvent in Pa if the solvent is available in CoolProp (i.e. name_in_coolprop is
+        not None); raises DatabaseError if the solvent is not available in CoolProp (i.e. name_in_coolprop is None).
+        """
+        if self.name_in_coolprop is not None:
+            return PropsSI('P', 'T', T, 'Q', 0, self.name_in_coolprop)
+        else:
+            raise DatabaseError("Saturation pressure is not available for the solvent whose `name_in_coolprop` is None")
+
+    def get_solvent_density(self, T):
+        """
+        Returns the density of the solvent in Pa if the solvent is available in CoolProp (i.e. name_in_coolprop is
+        not None); raises DatabaseError if the solvent is not available in CoolProp (i.e. name_in_coolprop is None).
+        """
+        if self.name_in_coolprop is not None:
+            return PropsSI('D', 'T', T, 'Q', 0, self.name_in_coolprop)
+        else:
+            raise DatabaseError("Saturation pressure is not available for the solvent whose `name_in_coolprop` is None") 
+
 class SolvationCorrection(object):
     """
     Stores corrections for enthalpy, entropy, and Gibbs free energy when a species is solvated.
