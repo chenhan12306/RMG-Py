@@ -59,10 +59,13 @@ cdef class LiquidReactor(ReactionSystem):
     cdef public double viscosity
     cdef public list const_spc_names
     cdef public list const_spc_indices
-    cdef public dict initial_concentrations
+    cdef public dict initial_concentrations, inlet_concentrations
     cdef public list Trange
     cdef public int n_sims
     cdef public dict sens_conditions
+    cdef public double residence_time # for cstr
+    cdef public double v_in # for semi-batch
+    cdef public double V_0 # for semi-batch
 
     def __init__(self, T, initial_concentrations, n_sims=1, termination=None, sensitive_species=None,
                  sensitivity_threshold=1e-3, sens_conditions=None, const_spc_names=None):
