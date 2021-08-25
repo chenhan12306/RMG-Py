@@ -428,7 +428,12 @@ cdef class LiquidReactor(ReactionSystem):
         self.edge_reaction_rates = edge_reaction_rates
         self.network_leak_rates = network_leak_rates
 
-        res = core_species_rates * V
+        if self.residence_time != -1.0:
+            res = 1/self.residence_time * V * (C_in - core_species_concentrations) + core_species_rates * V
+        elif not self.constant_volume:
+            res = self.v_in * C_in + core_species_rates * V
+        else:
+            res = core_species_rates * V
 
         if self.sensitivity:
             delta = np.zeros(len(y), np.float64)
