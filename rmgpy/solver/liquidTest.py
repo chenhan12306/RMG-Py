@@ -360,51 +360,49 @@ class LiquidReactorCheck(unittest.TestCase):
 
         c0 = {self.CH4: 0.2, self.CH3: 0.1, self.C2H6: 0.35, self.C2H5: 0.15, self.H2: 0.2}
 
-        rxn_system0 = LiquidReactor(self.T, c0, 1, termination=[])
-        rxn_system0.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
-        dfdt0 = rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0]
-        solver_dfdk = rxn_system0.compute_rate_derivative()
-        # print 'Solver d(dy/dt)/dk'
-        # print solver_dfdk
+        for condition in self.flow_conditions:
+            (residence_time, v_in, inlet_concentrations, V_0) = self.flow_conditions[condition]
+            rxn_system0 = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
+            rxn_system0.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
+            dfdt0 = rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0]
+            solver_dfdk = rxn_system0.compute_rate_derivative()
 
-        integration_time = 1e-8
+            integration_time = 1e-8
 
-        model_settings = ModelSettings(tol_keep_in_edge=0, tol_move_to_core=1, tol_interrupt_simulation=0)
-        simulator_settings = SimulatorSettings()
-
-        rxn_system0.termination.append(TerminationTime((integration_time, 's')))
-
-        rxn_system0.simulate(core_species, core_reactions, [], [], [], [],
-                             model_settings=model_settings, simulator_settings=simulator_settings)
-
-        y0 = rxn_system0.y
-
-        dfdk = np.zeros((num_core_species, len(rxn_list)))  # d(dy/dt)/dk
-
-        c0 = {self.CH4: 0.2, self.CH3: 0.1, self.C2H6: 0.35, self.C2H5: 0.15, self.H2: 0.2}
-
-        for i in range(len(rxn_list)):
-            k0 = rxn_list[i].get_rate_coefficient(self.T)
-            rxn_list[i].kinetics.A.value_si = rxn_list[i].kinetics.A.value_si * (1 + 1e-3)
-            dk = rxn_list[i].get_rate_coefficient(self.T) - k0
-
-            rxn_system = LiquidReactor(self.T, c0, 1, termination=[])
-            rxn_system.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
-
-            dfdt = rxn_system.residual(0.0, rxn_system.y, np.zeros(rxn_system.y.shape))[0]
-            dfdk[:, i] = (dfdt - dfdt0) / dk
-
-            rxn_system.termination.append(TerminationTime((integration_time, 's')))
             model_settings = ModelSettings(tol_keep_in_edge=0, tol_move_to_core=1, tol_interrupt_simulation=0)
             simulator_settings = SimulatorSettings()
-            rxn_system.simulate(core_species, core_reactions, [], [], [], [],
-                                model_settings=model_settings, simulator_settings=simulator_settings)
 
-            rxn_list[i].kinetics.A.value_si = rxn_list[i].kinetics.A.value_si / (1 + 1e-3)  # reset A factor
+            rxn_system0.termination.append(TerminationTime((integration_time, 's')))
 
-        for i in range(num_core_species):
-            for j in range(len(rxn_list)):
-                self.assertAlmostEqual(dfdk[i, j], solver_dfdk[i, j], delta=abs(1e-3 * dfdk[i, j]))
+            rxn_system0.simulate(core_species, core_reactions, [], [], [], [],
+                                 model_settings=model_settings, simulator_settings=simulator_settings)
+
+            y0 = rxn_system0.y
+
+            dfdk = np.zeros((num_core_species, len(rxn_list)))  # d(dy/dt)/dk
+
+            for i in range(len(rxn_list)):
+                k0 = rxn_list[i].get_rate_coefficient(self.T)
+                rxn_list[i].kinetics.A.value_si = rxn_list[i].kinetics.A.value_si * (1 + 1e-3)
+                dk = rxn_list[i].get_rate_coefficient(self.T) - k0
+
+                rxn_system = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
+                rxn_system.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
+
+                dfdt = rxn_system.residual(0.0, rxn_system.y, np.zeros(rxn_system.y.shape))[0]
+                dfdk[:, i] = (dfdt - dfdt0) / dk
+
+                rxn_system.termination.append(TerminationTime((integration_time, 's')))
+                model_settings = ModelSettings(tol_keep_in_edge=0, tol_move_to_core=1, tol_interrupt_simulation=0)
+                simulator_settings = SimulatorSettings()
+                rxn_system.simulate(core_species, core_reactions, [], [], [], [],
+                                    model_settings=model_settings, simulator_settings=simulator_settings)
+
+                rxn_list[i].kinetics.A.value_si = rxn_list[i].kinetics.A.value_si / (1 + 1e-3)  # reset A factor
+
+            for i in range(num_core_species):
+                for j in range(len(rxn_list)):
+                    self.assertAlmostEqual(dfdk[i, j], solver_dfdk[i, j], delta=abs(1e-3 * dfdk[i, j]))
 
     def test_store_constant_species_names(self):
         """
