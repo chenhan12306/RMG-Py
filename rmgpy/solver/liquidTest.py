@@ -130,37 +130,48 @@ class LiquidReactorCheck(unittest.TestCase):
 
         c0 = {self.C2H5: 0.1, self.CH3: 0.1, self.CH4: 0.4, self.C2H6: 0.4}
 
-        rxn_system = LiquidReactor(self.T, c0, 1, termination=[])
+        for condition in self.flow_conditions:
+            (residence_time, v_in, inlet_concentrations, V_0) = self.flow_conditions[condition]
 
-        rxn_system.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
+            rxn_system = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
 
-        tlist = np.array([10 ** (i / 10.0) for i in range(-130, -49)], np.float64)
+            rxn_system.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
 
-        # Integrate to get the solution at each time point
-        t, y, reaction_rates, species_rates = [], [], [], []
-        for t1 in tlist:
-            rxn_system.advance(t1)
-            t.append(rxn_system.t)
-            # You must make a copy of y because it is overwritten by DASSL at
-            # each call to advance()
-            y.append(rxn_system.y.copy())
-            reaction_rates.append(rxn_system.core_reaction_rates.copy())
-            species_rates.append(rxn_system.core_species_rates.copy())
+            tlist = np.array([10 ** (i / 10.0) for i in range(-130, -49)], np.float64)
 
-        # Convert the solution vectors to np arrays
-        t = np.array(t, np.float64)
-        reaction_rates = np.array(reaction_rates, np.float64)
-        species_rates = np.array(species_rates, np.float64)
+            # Integrate to get the solution at each time point
+            t, y, V, reaction_rates, species_rates, species_concentrations = [], [], [], [], [], []
+            for t1 in tlist:
+                rxn_system.advance(t1)
+                t.append(rxn_system.t)
+                # You must make a copy of y because it is overwritten by DASSL at
+                # each call to advance()
+                y.append(rxn_system.y.copy())
+                V.append(rxn_system.V)
+                reaction_rates.append(rxn_system.core_reaction_rates.copy())
+                species_rates.append(rxn_system.core_species_rates.copy())
+                species_concentrations.append(rxn_system.core_species_concentrations.copy())
 
-        # Check that we're computing the species fluxes correctly
-        for i in range(t.shape[0]):
-            self.assertAlmostEqual(reaction_rates[i, 0], species_rates[i, 0], delta=1e-6 * reaction_rates[i, 0])
-            self.assertAlmostEqual(reaction_rates[i, 0], -species_rates[i, 1], delta=1e-6 * reaction_rates[i, 0])
-            self.assertAlmostEqual(reaction_rates[i, 0], -species_rates[i, 2], delta=1e-6 * reaction_rates[i, 0])
-            self.assertAlmostEqual(reaction_rates[i, 0], species_rates[i, 3], delta=1e-6 * reaction_rates[i, 0])
+            # Convert the solution vectors to np arrays
+            t = np.array(t, np.float64)
+            reaction_rates = np.array(reaction_rates, np.float64)
+            species_rates = np.array(species_rates, np.float64)
+            species_concentrations = np.array(species_concentrations, np.float64)
 
-        # Check that we've reached equilibrium 
-        self.assertAlmostEqual(reaction_rates[-1, 0], 0.0, delta=1e-2)
+            # Check that we're computing the species fluxes correctly
+            for i in range(t.shape[0]):
+                self.assertAlmostEqual(reaction_rates[i, 0], species_rates[i, 0], delta=1e-6 * reaction_rates[i, 0])
+                self.assertAlmostEqual(reaction_rates[i, 0], -species_rates[i, 1], delta=1e-6 * reaction_rates[i, 0])
+                self.assertAlmostEqual(reaction_rates[i, 0], -species_rates[i, 2], delta=1e-6 * reaction_rates[i, 0])
+                self.assertAlmostEqual(reaction_rates[i, 0], species_rates[i, 3], delta=1e-6 * reaction_rates[i, 0])
+
+            # Check that we've reached equilibrium
+            if condition == 'batch':
+                self.assertAlmostEqual(reaction_rates[-1, 0], 0.0, delta=1e-2)
+            elif condition == 'residence_time':
+                self.assertAlmostEqual(reaction_rates[-1, 0], 1/residence_time * (species_concentrations[-1, 0] - species_concentrations[0, 0]), delta=1e-2)
+            else:
+                self.assertAlmostEqual(reaction_rates[-1, 0], - (v_in * species_concentrations[0, 0])/V[-1], delta=1e-2)
 
     def test_jacobian(self):
         """
