@@ -419,12 +419,17 @@ class LiquidReactorCheck(unittest.TestCase):
         sensitivity_threshold = 0.001
         constant_species = ["CH4", "C2H6"]
         sens_conds = None
-        rxn_system1 = LiquidReactor(temp, c0, 4, termination_conversion, sensitivity, sensitivity_threshold, sens_conds,
+        residence_time = None
+        v_in = None
+        V_0 = None
+        inlet_concentrations = None
+
+        rxn_system1 = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 4, termination_conversion, sensitivity, sensitivity_threshold, sens_conds,
                                     constant_species)
 
         # set up the liquid phase reactor 2
         constant_species = ["O2", "H2O"]
-        rxn_system2 = LiquidReactor(temp, c0, 4, termination_conversion, sensitivity, sensitivity_threshold, sens_conds,
+        rxn_system2 = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 4, termination_conversion, sensitivity, sensitivity_threshold, sens_conds,
                                     constant_species)
         for reactor in [rxn_system1, rxn_system2]:
             self.assertIsNotNone(reactor.const_spc_names)
