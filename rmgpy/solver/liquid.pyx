@@ -194,6 +194,8 @@ cdef class LiquidReactor(ReactionSystem):
 
         # Generate forward and reverse rate coefficients k(T,P)
         self.generate_rate_coefficients(core_reactions, edge_reactions)
+        if self.vapor_liquid_mass_transfer:
+            self.generate_vapor_liquid_mass_transfer_power_law_model_coefficients(core_species)
 
         ReactionSystem.compute_network_variables(self, pdep_networks)
 
@@ -215,6 +217,19 @@ cdef class LiquidReactor(ReactionSystem):
             if rxn.reversible:
                 self.Keq[j] = rxn.get_equilibrium_constant(self.T.value_si)
                 self.kb[j] = self.kf[j] / self.Keq[j]
+
+    def generate_vapor_liquid_mass_transfer_power_law_model_coefficients(self, core_species):
+        """
+        Populates the self.kLA and self.kH to compute interfacial_mass_transfer rate
+        """
+        p = self.vapor_liquid_mass_transfer_power_law_model.get("prefactor",0)
+        d = self.vapor_liquid_mass_transfer_power_law_model.get("diffusionCoefficientPower",0)
+        v = self.vapor_liquid_mass_transfer_power_law_model.get("solventViscosityPower",0)
+        r = self.vapor_liquid_mass_transfer_power_law_model.get("solventDensityPower",0)
+        for spec in core_species:
+            i = self.get_species_index(spec)
+            self.kLA[i] = p * spec.get_diffusion_coefficient(self.T.value_si)**d * diffusion_limiter.get_solvent_viscosity(self.T.value_si)**v * diffusion_limiter.get_solvent_density(self.T.value_si)**r
+            self.kH[i] = spec.get_henry_law_constant(self.T.value_si)
 
     def get_threshold_rate_constants(self, model_settings):
         """
