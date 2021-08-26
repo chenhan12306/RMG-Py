@@ -75,6 +75,7 @@ cdef class ReactionSystem(DASx):
         #  variables that determine the dimensions of arrays and matrices:
         self.num_core_species = -1
         self.num_inlet_species = -1
+        self.num_vapor_species = -1
         self.num_core_reactions = -1
         self.num_edge_species = -1
         self.num_edge_reactions = -1
@@ -127,8 +128,12 @@ cdef class ReactionSystem(DASx):
         self.network_leak_coefficients = None
         self.jacobian_matrix = None
 
+        self.kLA = None
+        self.kH = None
+
         self.core_species_concentrations = None
         self.inlet_species_concentrations = None
+        self.vapor_species_mole_fractions = None
 
         # The reaction and species rates at the current time (in mol/m^3*s)
         self.core_species_rates = None
@@ -242,12 +247,16 @@ cdef class ReactionSystem(DASx):
         self.kb = np.zeros_like(self.kf)
         self.Keq = np.zeros_like(self.kf)
 
+        self.kLA = np.zeros((self.num_core_species), np.float64)
+        self.kH = np.zeros((self.num_core_species), np.float64)
+
         self.generate_species_indices(core_species, edge_species)
         self.generate_reaction_indices(core_reactions, edge_reactions)
         self.generate_reactant_product_indices(core_reactions, edge_reactions)
 
         self.core_species_concentrations = np.zeros((self.num_core_species), np.float64)
         self.inlet_species_concentrations = np.zeros((self.num_core_species), np.float64)
+        self.vapor_species_mole_fractions = np.zeros((self.num_core_species), np.float64)
         self.core_species_production_rates = np.zeros((self.num_core_species), np.float64)
         self.core_species_consumption_rates = np.zeros((self.num_core_species), np.float64)
         self.core_reaction_rates = np.zeros((self.num_core_reactions), np.float64)
