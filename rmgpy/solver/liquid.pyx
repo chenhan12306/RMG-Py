@@ -360,6 +360,9 @@ cdef class LiquidReactor(ReactionSystem):
             for j in range(self.num_inlet_species):
                 C_in[j] = self.inlet_species_concentrations[j]
 
+        if self.vapor_liquid_mass_transfer:
+            net_vapor_liquid_mass_transfer_fluxes = self.kLA*(C-self.P_vap*self.vapor_species_mole_fractions/(constants.R*self.T.value_si)/self.kH)
+
         for j in range(ir.shape[0]):
             k = kf[j]
             if ir[j, 0] >= num_core_species or ir[j, 1] >= num_core_species or ir[j, 2] >= num_core_species:
@@ -477,6 +480,10 @@ cdef class LiquidReactor(ReactionSystem):
             res = self.v_in * C_in + core_species_rates * V
         else:
             res = core_species_rates * V
+
+        if self.vapor_liquid_mass_transfer:
+            res -= net_vapor_liquid_mass_transfer_fluxes * V
+
 
         if self.sensitivity:
             delta = np.zeros(len(y), np.float64)
