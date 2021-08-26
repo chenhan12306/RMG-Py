@@ -106,12 +106,18 @@ class LiquidReactorCheck(unittest.TestCase):
         )
 
         cls.T = 1000
-
-        #residence time, v_in, inlet_concentrations, V_0
-        cls.flow_conditions = {'batch': (None, None, None, None), #batch system
-                    'residence_time': (1, None, None, None), #specifying residence time
-                    'semi-batch': (None, 0.01, {cls.CH4: 0.1}, 1) #
+        #P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0
+        cls.flow_conditions = {'batch': (None, None, None, None, None, None, None), #batch system
+                    'residence_time': (None, None, None, 1, None, None, None), #specifying residence time
+                    'semi-batch': (None, None, None, None, 0.01, {cls.CH4: 1}, 1), #
+                    'vapor_liquid_mass_transfer': (1, {cls.C2H5: 0.2, cls.CH3: 0.2, cls.CH4: 0.3, cls.C2H6: 0.3}, {"prefactor": 0.1, "diffusionCoefficientPower": 0.1, "solventViscosityPower": 0.1, "solventDensityPower": 0.1}, None, None, None, None)
                     }
+
+        database = SolvationDatabase()
+        database.load(os.path.join(settings['database.directory'], 'solvation'))
+        solvent = 'water'
+        diffusion_limiter.enable(database.get_solvent_data(solvent), database)
+        diffusion_limiter.enabled = False
 
         cls.file_dir = os.path.join(os.path.dirname(rmgpy.__file__), 'solver', 'files', 'liquid_phase_constSPC')
 
