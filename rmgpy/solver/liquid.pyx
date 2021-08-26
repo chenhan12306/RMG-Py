@@ -281,6 +281,12 @@ cdef class LiquidReactor(ReactionSystem):
                 self.inlet_species_concentrations[i] = conc
             self.num_inlet_species = len(self.inlet_species_concentrations)
 
+        if self.vapor_liquid_mass_transfer:
+            for spec, mol_frac in self.vapor_mole_fractions.items():
+                i = self.get_species_index(spec)
+                self.vapor_species_mole_fractions[i] = mol_frac
+            self.num_vapor_species = len(self.vapor_species_mole_fractions)
+
         if not self.constant_volume:
             V = self.V_0
         else:
