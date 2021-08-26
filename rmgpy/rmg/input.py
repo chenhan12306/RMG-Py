@@ -427,6 +427,29 @@ def liquid_reactor(temperature,
                 concentration = Quantity(conc)
                 inletConcentrations[spec] = concentration.value_si
 
+    if vaporPressure or vaporLiquidMassTransferPowerLawModel or vaporMoleFractions:
+        #Check input combinations
+        if not (vaporPressure and vaporLiquidMassTransferPowerLawModel and vaporMoleFractions):
+            raise InputError('vaporPressure, vaporLiquidMassTransferPowerLawModel, and vaporMoleFractions must be specified together for include evaporation.')
+        else:
+            if len(vaporPressure) != 2:
+                raise InputError("Vapor pressure value must be in the form of (number, units).")
+            vaporPressure = Quantity(vaporPressure).value_si
+            sum_vapor_mole_fractions = sum(vaporMoleFractions.values())
+            if sum_vapor_mole_fractions != 1:
+                logging.warning('Vapor mole fractions do not sum to one; normalizing.')
+                logging.info('')
+                logging.info('Original composition:')
+                for spec, mol_frac in vaporMoleFractions.items():
+                    logging.info(f'{spec} = {mol_frac}')
+                for spec in vaporMoleFractions:
+                    vaporMoleFractions[spec] /= sum_vapor_mole_fractions
+                logging.info('')
+                logging.info('Normalized mole fractions:')
+                for spec, mol_frac in vaporMoleFractions.items():
+                    logging.info(f'{spec} = {mol_frac}')
+                logging.info('')
+
     if not isinstance(temperature, list) and all([not isinstance(x, list) for x in initialConcentrations.values()]):
         nSims = 1
 
