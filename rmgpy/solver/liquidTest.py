@@ -187,8 +187,10 @@ class LiquidReactorCheck(unittest.TestCase):
                 self.assertAlmostEqual(reaction_rates[-1, 0], 0.0, delta=1e-2)
             elif condition == 'residence_time':
                 self.assertAlmostEqual(reaction_rates[-1, 0], 1/residence_time * (species_concentrations[-1, 0] - species_concentrations[0, 0]), delta=1e-2)
-            else:
+            elif condition == 'semi-batch':
                 self.assertAlmostEqual(reaction_rates[-1, 0], - (v_in * species_concentrations[0, 0])/V[-1], delta=1e-2)
+            elif condition == 'vapor_liquid_mass_transfer':
+                self.assertAlmostEqual(reaction_rates[-1, 0], -rxn_system.kLA[0]*(species_concentrations[-1, 0]-P_vap*rxn_system.vapor_species_mole_fractions[0]/(constants.R*self.T)/rxn_system.kH[0])/V[-1], delta=1e-2)
 
     def test_jacobian(self):
         """
