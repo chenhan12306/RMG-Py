@@ -391,8 +391,15 @@ class LiquidReactorCheck(unittest.TestCase):
         c0 = {self.CH4: 0.2, self.CH3: 0.1, self.C2H6: 0.35, self.C2H5: 0.15, self.H2: 0.2}
 
         for condition in self.flow_conditions:
-            (residence_time, v_in, inlet_concentrations, V_0) = self.flow_conditions[condition]
-            rxn_system0 = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
+
+            if condition == 'vapor_liquid_mass_transfer':
+                continue # Not testing this case because temperature is limited to 647 K for kA & kH calculations, while the low temperature makes dk 0.0 for the given reaction
+            else:
+                diffusion_limiter.enabled = False
+                self.T = 1000
+
+            P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0 = self.flow_conditions[condition]
+            rxn_system0 = LiquidReactor(self.T, c0, P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
             rxn_system0.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
             dfdt0 = rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0]
             solver_dfdk = rxn_system0.compute_rate_derivative()
@@ -416,7 +423,7 @@ class LiquidReactorCheck(unittest.TestCase):
                 rxn_list[i].kinetics.A.value_si = rxn_list[i].kinetics.A.value_si * (1 + 1e-3)
                 dk = rxn_list[i].get_rate_coefficient(self.T) - k0
 
-                rxn_system = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
+                rxn_system = LiquidReactor(self.T, c0, P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
                 rxn_system.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
 
                 dfdt = rxn_system.residual(0.0, rxn_system.y, np.zeros(rxn_system.y.shape))[0]
