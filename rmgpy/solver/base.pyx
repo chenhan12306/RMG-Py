@@ -617,7 +617,7 @@ cdef class ReactionSystem(DASx):
         cdef np.float64_t conversion
         cdef np.ndarray[np.float64_t, ndim=1] surface_species_production, surface_species_consumption, branching_nums
         cdef np.ndarray[np.float64_t, ndim=1] surface_total_div_accum_nums, surface_species_rate_ratios
-        cdef np.ndarray[np.float64_t, ndim=1] forward_rate_coefficients, core_species_concentrations, inlet_species_concentrations
+        cdef np.ndarray[np.float64_t, ndim=1] forward_rate_coefficients, core_species_concentrations
         cdef double prev_time, total_moles, c, volume, RTP, max_char_rate, br, rr
         cdef double unimolecular_threshold_val, bimolecular_threshold_val, trimolecular_threshold_val
         cdef bool useDynamicsTemp, first_time, use_dynamics, terminate_at_max_objects, schanged, invalid_objects_print_boolean
