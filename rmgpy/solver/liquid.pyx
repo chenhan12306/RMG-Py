@@ -41,7 +41,8 @@ cimport rmgpy.constants as constants
 from rmgpy.quantity import Quantity
 from rmgpy.quantity cimport ScalarQuantity, ArrayQuantity
 from rmgpy.solver.base cimport ReactionSystem
-
+from rmgpy.kinetics.diffusionLimited import diffusion_limiter
+from CoolProp.CoolProp import PropsSI
 
 cdef class LiquidReactor(ReactionSystem):
     """
