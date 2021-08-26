@@ -50,6 +50,7 @@ cdef class ReactionSystem(DASx):
     cdef public Py_ssize_t num_edge_reactions
     cdef public Py_ssize_t num_pdep_networks
     cdef public Py_ssize_t neq
+    cdef public Py_ssize_t num_vapor_species
 
     # variables that store stoichiometry data
     cdef public dict species_index
@@ -65,8 +66,11 @@ cdef class ReactionSystem(DASx):
     cdef public np.ndarray network_leak_coefficients
     cdef public np.ndarray jacobian_matrix
 
+    cdef public np.ndarray kLA, kH
+
     cdef public np.ndarray core_species_concentrations
     cdef public np.ndarray inlet_species_concentrations
+    cdef public np.ndarray vapor_species_mole_fractions
     
     #surface information
     cdef public np.ndarray surface_species_indices
