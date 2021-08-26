@@ -139,6 +139,12 @@ cdef class LiquidReactor(ReactionSystem):
                 inlet_concentrations[species_dict[label]] = conc
             self.inlet_concentrations = inlet_concentrations
 
+        vapor_mole_fractions = {}
+        if self.vapor_mole_fractions:
+            for label, mol_frac in self.vapor_mole_fractions.items():
+                vapor_mole_fractions[species_dict[label]] = mol_frac
+            self.vapor_mole_fractions = vapor_mole_fractions
+
         conditions = {}
         if self.sens_conditions is not None:
             for label, value in self.sens_conditions.items():
