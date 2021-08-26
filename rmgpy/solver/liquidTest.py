@@ -269,8 +269,8 @@ class LiquidReactorCheck(unittest.TestCase):
         ]
 
         # Analytical Jacobian for reaction 6
-        def jacobian_rxn6(condition, c, kf, kr, s):
-            (residence_time, _, _, _) = self.flow_conditions[condition]
+        def jacobian_rxn6(condition, kLA, c, kf, kr, s):
+            P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0 = self.flow_conditions[condition]
 
             c1, c2, c3, c4 = c[s[1]], c[s[2]], c[s[3]], c[s[4]]
             jaco = np.zeros((5, 5))
@@ -285,12 +285,14 @@ class LiquidReactorCheck(unittest.TestCase):
 
             if condition == 'residence_time':
                 jaco -= 1/residence_time * np.identity(5, np.float64)
+            elif condition == 'vapor_liquid_mass_transfer':
+               jaco -= kLA * np.identity(5, np.float64)
 
             return jaco
 
         # Analytical Jacobian for reaction 7
-        def jacobian_rxn7(condition, c, kf, kr, s):
-            (residence_time, _, _, _) = self.flow_conditions[condition]
+        def jacobian_rxn7(condition, kLA, c, kf, kr, s):
+            P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0 = self.flow_conditions[condition]
 
             c1, c2, c3, c4 = c[s[1]], c[s[2]], c[s[3]], c[s[4]]
             jaco = np.zeros((5, 5))
@@ -305,16 +307,25 @@ class LiquidReactorCheck(unittest.TestCase):
 
             if condition == 'residence_time':
                 jaco -= 1/residence_time * np.identity(5, np.float64)
+            elif condition == 'vapor_liquid_mass_transfer':
+               jaco -= kLA * np.identity(5, np.float64)
 
             return jaco
 
         for condition in self.flow_conditions:
-            (residence_time, v_in, inlet_concentrations, V_0) = self.flow_conditions[condition]
+
+            if condition == 'vapor_liquid_mass_transfer':
+                continue # Not testing this case because temperature is limited to 647 K for kA & kH calculations and results in larger discrepency in jacobian
+            else:
+                diffusion_limiter.enabled = False
+                self.T = 1000
+
+            P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0 = self.flow_conditions[condition]
 
             for rxn_num, rxn in enumerate(rxn_list):
                 core_reactions = [rxn]
 
-                rxn_system0 = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
+                rxn_system0 = LiquidReactor(self.T, c0, P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
                 rxn_system0.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
                 dydt0 = rxn_system0.residual(0.0, rxn_system0.y, np.zeros(rxn_system0.y.shape))[0]
                 dN = .000001 * sum(rxn_system0.y)
@@ -337,14 +348,14 @@ class LiquidReactorCheck(unittest.TestCase):
                 elif rxn_num == 6:
                     kforward = rxn.get_rate_coefficient(self.T)
                     kreverse = kforward / rxn.get_equilibrium_constant(self.T)
-                    jacobian = jacobian_rxn6(condition, c0, kforward, kreverse, core_species)
+                    jacobian = jacobian_rxn6(condition, rxn_system0.kLA, c0, kforward, kreverse, core_species)
                     for i in range(num_core_species):
                         for j in range(num_core_species):
                             self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j])+1e-20)
                 elif rxn_num == 7:
                     kforward = rxn.get_rate_coefficient(self.T)
                     kreverse = kforward / rxn.get_equilibrium_constant(self.T)
-                    jacobian = jacobian_rxn7(condition, c0, kforward, kreverse, core_species)
+                    jacobian = jacobian_rxn7(condition, rxn_system0.kLA, c0, kforward, kreverse, core_species)
                     for i in range(num_core_species):
                         for j in range(num_core_species):
                             self.assertAlmostEqual(jacobian[i, j], solver_jacobian[i, j], delta=abs(1e-4 * jacobian[i, j])+1e-20)
