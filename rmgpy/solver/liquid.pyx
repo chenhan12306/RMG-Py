@@ -870,6 +870,8 @@ cdef class LiquidReactor(ReactionSystem):
         if self.residence_time != -1.0:
             pd -= 1/self.residence_time * np.identity(num_core_species, np.float64)
 
+        if self.vapor_liquid_mass_transfer:
+            pd -= self.kLA * np.identity(num_core_species, np.float64)
         self.jacobian_matrix = pd + cj * np.identity(num_core_species, np.float64)
 
         return pd
