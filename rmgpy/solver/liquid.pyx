@@ -67,6 +67,10 @@ cdef class LiquidReactor(ReactionSystem):
     cdef public double residence_time # for cstr
     cdef public double v_in # for semi-batch
     cdef public double V_0 # for semi-batch
+    cdef public double P_vap
+    cdef public dict vapor_mole_fractions # vapor phase mole fractions
+    cdef public dict vapor_liquid_mass_transfer_power_law_model
+    cdef public bint vapor_liquid_mass_transfer
 
     def __init__(self, T, initial_concentrations, residence_time=None, v_in=None, inlet_concentrations=None, V_0=None, n_sims=1, termination=None, sensitive_species=None,
                  sensitivity_threshold=1e-3, sens_conditions=None, const_spc_names=None):
