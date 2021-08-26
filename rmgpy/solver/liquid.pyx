@@ -72,7 +72,7 @@ cdef class LiquidReactor(ReactionSystem):
     cdef public dict vapor_liquid_mass_transfer_power_law_model
     cdef public bint vapor_liquid_mass_transfer
 
-    def __init__(self, T, initial_concentrations, residence_time=None, v_in=None, inlet_concentrations=None, V_0=None, n_sims=1, termination=None, sensitive_species=None,
+    def __init__(self, T, initial_concentrations, P_vap=None, vapor_mole_fractions=None, vapor_liquid_mass_transfer_power_law_model=None, residence_time=None, v_in=None, inlet_concentrations=None, V_0=None, n_sims=1, termination=None, sensitive_species=None,
                  sensitivity_threshold=1e-3, sens_conditions=None, const_spc_names=None):
 
         ReactionSystem.__init__(self, termination, sensitive_species, sensitivity_threshold)
@@ -91,6 +91,17 @@ cdef class LiquidReactor(ReactionSystem):
         self.v_in = -1.0
         self.V_0 = -1.0
         self.inlet_concentrations = {}
+        self.P_vap=-1.0
+        self.vapor_mole_fractions={}
+        self.vapor_liquid_mass_transfer_power_law_model = {}
+        self.vapor_liquid_mass_transfer = False
+
+        #interfacial_mass_transfer and condensation from vapor phase
+        if P_vap and vapor_liquid_mass_transfer_power_law_model and vapor_mole_fractions:
+            self.P_vap = P_vap
+            self.vapor_liquid_mass_transfer_power_law_model = vapor_liquid_mass_transfer_power_law_model
+            self.vapor_mole_fractions = vapor_mole_fractions
+            self.vapor_liquid_mass_transfer = True
 
         # CSTR
         if residence_time:
