@@ -140,9 +140,17 @@ class LiquidReactorCheck(unittest.TestCase):
         c0 = {self.C2H5: 0.1, self.CH3: 0.1, self.CH4: 0.4, self.C2H6: 0.4}
 
         for condition in self.flow_conditions:
-            (residence_time, v_in, inlet_concentrations, V_0) = self.flow_conditions[condition]
 
-            rxn_system = LiquidReactor(self.T, c0, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
+            if condition == 'vapor_liquid_mass_transfer':
+                diffusion_limiter.enabled = True
+                self.T = 647 #temperature is limited to below the solvent's critical temperature for kA & kH calculations
+            else:
+                diffusion_limiter.enabled = False
+                self.T = 1000
+
+            P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0 = self.flow_conditions[condition]
+
+            rxn_system = LiquidReactor(self.T, c0, P_vap, vapor_mole_fractions, vapor_liquid_mass_transfer_power_law_model, residence_time, v_in, inlet_concentrations, V_0, 1, termination=[])
 
             rxn_system.initialize_model(core_species, core_reactions, edge_species, edge_reactions)
 
