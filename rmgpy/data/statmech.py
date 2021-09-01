@@ -411,14 +411,13 @@ class StatmechGroups(Database):
                 while freq_count > num_vibrations:
                     min_entry = min((entry for entry in group_count if group_count[entry] > 0),
                                     key=lambda x: x.data.symmetry)
-                    min_degeneracy = min_entry.data.symmetry
                     if group_count[min_entry] > 1:
                         group_count[min_entry] -= 1
                     else:
                         del group_count[min_entry]
                     groups_removed += 1
-                    freqs_removed += min_degeneracy
-                    freq_count -= min_degeneracy
+                    freqs_removed += len(min_entry.data.generate_frequencies())
+                    freq_count -= freqs_removed
                 # Log warning
                 logging.warning('For {0}, more characteristic frequencies were generated than '
                                 'vibrational modes allowed. Removed {1:d} groups ({2:d} frequencies) to '
